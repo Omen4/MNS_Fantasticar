@@ -5,9 +5,11 @@ import mfrc522
 import threading
 import base64
 import requests
-#import psycopg2
+import io
 from picamera import PiCamera
 from time import sleep
+from PIL import Image
+
 
 # Disable pesky GPIO warnings
 GPIO.setwarnings(False)
@@ -78,8 +80,6 @@ engine_started = False
 # Flag to determine if an obstacle is detected
 obstacle_detected = False
 
-# Setup for img to send
-file_name = "./img_to_send.jpg"
 
 def message_callback(channel, method, properties, body):
     global engine_started, obstacle_detected    # Use a global variable to track engine status
@@ -137,8 +137,6 @@ def check_ultrasonic_sensor():
 
             distance = round((end_time - start_time) * 340 * 100 / 2, 1)
 
-            print("Distance: {} cm".format(distance))
-
             if distance < 20:  # Less than 20 cm
                 print("Object detected within 20cm.")
                 obstacle_detected = True
@@ -176,55 +174,25 @@ def read_rfid_and_send_to_queue():
 
 def capture_and_send_images():
     camera = PiCamera()
-    camera.resolution = (1280, 720)
+    camera.resolution = (640, 480)
     camera.vflip = True
+    camera.hflip = False
     camera.contrast = 10
+    file_name = "./img_to_send.jpeg"
 
     while True:
-        time.sleep(1)
-
         # Taking picture
         camera.capture(file_name)
-
+     
         # Converting picture to base64
         with open(file_name, 'rb') as image_file:
             base64_bytes = base64.b64encode(image_file.read())
-
+     
         # Sending post request containing picture
         url = 'https://backend.groupe2.learn-it.ovh/api/images/upload'
         params = {'file': base64_bytes}
-        x = requests.post(url, json=params)
-        print(x)
-        
-#def insert_image_into_database(image_data):
-    # Establish a database connection
- #   try:
-  #      conn = psycopg2.connect(**db_params)
-  #  except psycopg2.Error as e:
-  #      print(f"Error: Unable to connect to the database: {e}")
-  #      return
-
-    # Create a cursor object to execute SQL queries
-  #  try:
-  #      cursor = conn.cursor()
-  #  except psycopg2.Error as e:
-  #      print(f"Error: Unable to create a database cursor: {e}")
-  #      conn.close()
-  #      return
-
-    # Insert the image data into a PostgreSQL table
-  #  try:
-  #      cursor.execute("INSERT INTO your_table_name (image_column_name) VALUES (%s);", (psycopg2.Binary(image_data),))
-  #      conn.commit()
-  #      print("Image inserted into the database.")
-  #  except psycopg2.Error as e:
-  #      conn.rollback()  # Rollback the transaction in case of an error
-  #      print(f"Error: Unable to insert image into the database: {e}")
-
-    # Close the cursor and database connection
-  # cursor.close()
-  #  conn.close()
-        
+        x = requests.post(url, json = params)
+   
 def start_image_thread():
     image_thread = threading.Thread(target=capture_and_send_images)
     image_thread.daemon = True
