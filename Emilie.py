@@ -307,3 +307,4 @@ finally:
         except Exception as e:
             print(f"Error closing the sending connection: {str(e)}")
     GPIO.cleanup()  # Clean up GPIO pins
+
